@@ -7,6 +7,7 @@ from aiogram.filters import Command, CommandStart, CommandObject, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 # Загружаем переменные из .env
 load_dotenv()
@@ -28,10 +29,8 @@ dp = Dispatcher(storage=MemoryStorage())
 # Связка: (receiver_id, message_id) -> sender_user_object
 anon_map = {}
 
-
 class AnonState(StatesGroup):
     waiting_for_message = State()
-
 
 # 1. СТАРТ И ПОЛУЧЕНИЕ ССЫЛКИ
 @dp.message(CommandStart())
@@ -51,12 +50,24 @@ async def cmd_start(message: types.Message, command: CommandObject, state: FSMCo
     else:
         bot_info = await bot.get_me()
         share_link = f"https://t.me/{bot_info.username}?start={message.from_user.id}"
-        await message.answer(
-            f"Привет! Это бот анонимных сообщений.\n\n"
-            f"Твоя личная ссылка для приема сообщений:\n`{share_link}`",
-            parse_mode="Markdown"
+        
+        # Делаем удобные инлайн-кнопки
+        builder = InlineKeyboardBuilder()
+        builder.row(
+            types.InlineKeyboardButton(
+                text="🚀 Поделиться ссылкой", 
+                url=f"https://t.me/share/url?url={share_link}&text=Напиши%20мне%20анонимное%20сообщение!"
+            )
         )
 
+        text = (
+            f"Привет! Это бот анонимных сообщений.\n\n"
+            f"Твоя личная ссылка для приема сообщений:\n"
+            f"{share_link}\n\n"
+            f"Опубликуй её в соцсетях или отправь друзьям!"
+        )
+
+        await message.answer(text, reply_markup=builder.as_markup(), disable_web_page_preview=True)
 
 # 2. КОМАНДА /WHO (только для админов из ADMIN_IDS)
 @dp.message(Command("who"))
@@ -78,24 +89,22 @@ async def cmd_who(message: types.Message, state: FSMContext):
         return
 
     info_text = (
-        f"🕵️‍♂️ *Сведения об анониме:*\n\n"
-        f"👤 *Имя:* {sender.full_name}\n"
-        f"🆔 *ID:* `{sender.id}`\n"
-        f"🏷 *Username:* @{sender.username if sender.username else 'отсутствует'}\n"
-        f"🌐 *Языковой код:* `{sender.language_code}`\n"
-        f"🤖 *Это бот:* {'Да' if sender.is_bot else 'Нет'}\n"
-        f"⭐ *Premium:* {'Да' if sender.is_premium else 'Нет'}"
+        f"🕵️‍♂️ Сведения об анониме:\n\n"
+        f"👤 Имя: {sender.full_name}\n"
+        f"🆔 ID: {sender.id}\n"
+        f"🏷 Username: @{sender.username if sender.username else 'отсутствует'}\n"
+        f"🌐 Языковой код: {sender.language_code}\n"
+        f"🤖 Это бот: {'Да' if sender.is_bot else 'Нет'}\n"
+        f"⭐ Premium: {'Да' if sender.is_premium else 'Нет'}"
     )
 
-    await message.answer(info_text, parse_mode="Markdown")
-
+    await message.answer(info_text)
 
 # 3. СБРОС ОТПРАВКИ ПРИ ЛЮБОЙ КОМАНДЕ (начинающейся с "/")
 @dp.message(AnonState.waiting_for_message, F.text.startswith("/"))
 async def cancel_anon_on_command(message: types.Message, state: FSMContext):
     await state.clear()
     await message.answer("Ввод анонимного сообщения отменен, так как была введена команда.")
-
 
 # 4. ОБРАБОТКА И ОТПРАВКА ОДНОГО СООБЩЕНИЯ
 @dp.message(AnonState.waiting_for_message)
@@ -109,28 +118,22 @@ async def process_anon_message(message: types.Message, state: FSMContext):
     try:
         sent_msg = await message.copy_to(
             chat_id=target_id,
-            caption=(
-                        message.caption + "\n\n📩 *Вам новое анонимное сообщение!*") if message.caption else "📩 *Вам новое анонимное сообщение!*",
-            parse_mode="Markdown"
+            caption=(message.caption + "\n\n📩 Вам новое анонимное сообщение!") if message.caption else "📩 Вам новое анонимное сообщение!"
         )
-
+        
         anon_map[(target_id, sent_msg.message_id)] = message.from_user
 
-        await message.answer(
-            "Сообщение успешно отправлено! Чтобы отправить ещё одно, нужно снова перейти по ссылке получателя.")
+        await message.answer("Сообщение успешно отправлено! Чтобы отправить ещё одно, нужно снова перейти по ссылке получателя.")
     except Exception:
         await message.answer("Не удалось отправить сообщение. Возможно, получатель заблокировал бота.")
-
 
 # 5. ЗАГЛУШКА ДЛЯ ОБЫЧНЫХ СООБЩЕНИЙ БЕЗ ССЫЛКИ
 @dp.message(StateFilter(None))
 async def fallback_message(message: types.Message):
     await message.answer("Чтобы отправить анонимное сообщение, перейди по персональной ссылке нужного человека!")
 
-
 async def main():
     await dp.start_polling(bot)
-
 
 if __name__ == "__main__":
     asyncio.run(main())
