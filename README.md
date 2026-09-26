@@ -20,21 +20,26 @@ Anonymous Feedback & Chat Bot
 
 
 🚀 Быстрый старт
+
 1. Клонирование репозитория и установка зависимостей:
 git clone https://github.com/your-username/anon-feedback-bot.git
 cd anon-feedback-bot
 python -m venv venv
 source venv/bin/activate
 pip install aiogram aiosqlite
+
 2. Настройка переменных окружения:
 Укажите ваш токен и ID администратора в конфиге или окружении:
 export BOT_TOKEN="your_telegram_bot_token"
 ADMIN_IDS = [123456789]
+
 3. Запуск бота:
 python main.py
 
 
 🏗 Архитектура базы данных
+
+
 Для связывания входящих анонимных сообщений с исходными отправителями используется SQLite-таблица anon_messages со следующими полями:
  recipient_chat_id (INTEGER) — Chat ID получателя анонимки
  recipient_msg_id (INTEGER) — Message ID доставленного сообщения
@@ -47,12 +52,14 @@ python main.py
 
 
 📖 Команды бота
+
  /start — Получить свою персональную ссылку для приема анонимных сообщений.
  /start <user_id> — Начать процесс отправки анонимки выбранному пользователю.
  /who (только для ADMIN_IDS) — Деанонимизировать отправителя (вызывается ответом на анонимное сообщение).
 
 
 🐳 Деплой в Docker
+
 FROM python:3.11-slim
 WORKDIR /app
 COPY requirements.txt .
