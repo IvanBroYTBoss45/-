@@ -24,11 +24,12 @@ Anonymous Feedback & Chat Bot
 🚀 Быстрый старт
 
 1. Клонирование репозитория и установка зависимостей:
-git clone https://github.com/your-username/anon-feedback-bot.git
-cd anon-feedback-bot
+git clone https://github.com/IvanBroYTBoss45/-
+cd -
 python -m venv venv
 source venv/bin/activate
 pip install aiogram aiosqlite
+
 
 2. Настройка переменных окружения:
 Укажите ваш токен и ID администратора в конфиге или окружении:
